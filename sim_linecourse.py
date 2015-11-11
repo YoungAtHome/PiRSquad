@@ -5,8 +5,8 @@
 
 from math import sqrt
 if __name__ == "__main__":
-#just for testing
-import random
+	#just for testing
+	import random
 
 # describe the line following course
 # use a series of limited equations
