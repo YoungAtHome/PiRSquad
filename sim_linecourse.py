@@ -37,17 +37,30 @@ def sim_buildhline(h,v):
 def sim_buildvline(h,v):
 	return lambda x, y: (0<=(x-h)<20) and (0<=(y-v)<20) and (9.5 < (x-h) < 10.5)
 	
-# simple rounded square course	
-sim_segments = (sim_buildcurve(0,0,-20,-20), sim_buildhline(20,0), sim_buildcurve(40,0,0,-20), sim_buildvline(40,20),
-				sim_buildcurve(40,40,0,0), sim_buildhline(20,40), sim_buildcurve(0,40,-20,0), sim_buildvline(0,20))
+# line following course - simple rounded square
+sim_line_segments = (sim_buildcurve(0,0,-20,-20), sim_buildhline(20,0), sim_buildcurve(40,0,0,-20), sim_buildvline(40,20),
+	sim_buildcurve(40,40,0,0), sim_buildhline(20,40), sim_buildcurve(0,40,-20,0), sim_buildvline(0,20))
 
+# three-point-turn course
+# start line, cross line, mid line, left boundary, back boundary, right boundary
+sim_3point_segments = (sim_buildhline(0,35), sim_buildhline(20,35), sim_buildhline(40,35), sim_buildhline(60,35), sim_buildhline(80,35), sim_buildhline(100,35), 
+	sim_buildhline(0,150), sim_buildhline(20,150), sim_buildhline(40,150), sim_buildhline(60,150), sim_buildhline(80,150), sim_buildhline(100,150), 
+	sim_buildhline(30,190), sim_buildhline(50,190), sim_buildhline(70,190), 
+	sim_buildvline(10,160), sim_buildvline(10,180), sim_buildvline(10,200), sim_buildvline(10,220),
+	sim_buildhline(0,230), sim_buildhline(20,230), sim_buildhline(40,230), sim_buildhline(60,230), sim_buildhline(80,230), sim_buildhline(100,230), 
+	sim_buildvline(90,160), sim_buildvline(90,180), sim_buildvline(90,200), sim_buildvline(90,220))
+
+# assign current course
+#sim_course = sim_line_segments
+sim_course = sim_3point_segments
+				
 def sim_online(x,y):
 	"""Check if position is on the line
 	
 	Return boolean, True if on line, False otherwise
 	"""
 	sim_on = False
-	for sim_Segment in sim_segments:
+	for sim_Segment in sim_course:
 		sim_on = sim_Segment(x,y)
 		if sim_on: return sim_on
 	return sim_on
