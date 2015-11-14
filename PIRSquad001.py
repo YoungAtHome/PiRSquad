@@ -7,7 +7,7 @@
 import time
 
 import pi2go
-import pi2go_sim	#simulation library for testing
+import pi2go_sim    #simulation library for testing
 
 # Import manual control libraries
 import usb.core
@@ -36,93 +36,91 @@ rightSpeed = 50
 action = False
 
 def start_stop(action):
-	result = not action
-	
-	
+    result = not action
+    
+    
 #def wait_for_button_release():
-#	while getButton[0] = 0:
-#		sleep(0.1)
-#	while getButton[0] =1:
-#		sleep(0.1)
+#    while getButton[0] = 0:
+#        sleep(0.1)
+#    while getButton[0] =1:
+#        sleep(0.1)
 
-		
+        
 # button.when_released = start_stop
 
 #wait_for_button_release()
-#	action = start-stop(action)
-	
-	
+#    action = start-stop(action)
+    
+    
 
 
 def calibrate(action):
-	"""Calibrate the robot by performing the action until the left line sensor has changed to dark three times.
-	
-	Returns time taken for action"""
-	count = 0
-	timestart = 0.0
-	timeend = 0.0
-	online = false
-	
-	# start the motor action, e.g. spinleft(100)
-	action
-	
-	# spin until see dark line
-	while not irleftLine():
-		sleep(0.01)
-	online = True
-	timestart = time()
-	while count < 3:
-		if irleftLine():
-			if not online:
-				online = True
-				count += 1
-		elif online:
-			online = False
-		sleep(0.01)
-	timeend = time()	
-	stop()
-	
-	result = (timeend-timestart)/3
-	
+    """Calibrate the robot by performing the action until the left line sensor has changed to dark three times.
+    
+    Returns time taken for action"""
+    count = 0
+    timestart = 0.0
+    timeend = 0.0
+    online = false
+    
+    # start the motor action, e.g. spinleft(100)
+    action
+    
+    # spin until see dark line
+    while not irleftLine():
+        sleep(0.01)
+    online = True
+    timestart = time()
+    while count < 3:
+        if irleftLine():
+            if not online:
+                online = True
+                count += 1
+        elif online:
+            online = False
+        sleep(0.01)
+    timeend = time()    
+    stop()
+    
+    result = (timeend-timestart)/3
+    
 def calibrate_all():
-	global timespincircle
-	global timeturncircle
-	global time10cm
-	
-	timespincircle = calibrate(spinLeft(100))
-	timeturncircle = calibrate(turnForward(50,100))
-	time10cm = calibrate(forward(100))
+    global timespincircle
+    global timeturncircle
+    global time10cm
+    
+    timespincircle = calibrate(spinLeft(100))
+    timeturncircle = calibrate(turnForward(50,100))
+    time10cm = calibrate(forward(100))
 
 
 def square_up():
-	"""Square up to the wall."""
-	# square up to the wall
-	time5degrees = timespincircle * 5.0 / 360
-	
-	# sense distance of wall
-	distance_mid = getDistance()
-	
-	# turn 5 degrees left and sense distance of wall
-	spinLeft(50)
-	time(time5degrees)
-	stop()
-	distance_left = getDistance()
-	
-	# turn back and 5 degrees more right and sense distance of wall
-	spinright(50)
-	time(2*time5degrees)
-	stop()
-	distance_right = getDistance()
-	
-	# turn back to where we started
-	spinLeft(50)
-	time(time5degrees)
-	Stop()
-	
-	# calculate how much off we are
-	#rlen = 10	# length of robot for pivot to sensor
-	if distance_left > distance_right:
-        # scan right for minimum
+    """Square up to the wall."""
+    # square up to the wall
+    time5degrees = timespincircle * 5.0 / 360
+    
+    # sense distance of wall
+    distance_mid = getDistance()
+    
+    # turn 5 degrees left and sense distance of wall
+    spinLeft(50)
+    time(time5degrees)
+    stop()
+    distance_left = getDistance()
+    
+    # turn back and 5 degrees more right and sense distance of wall
+    spinright(50)
+    time(2*time5degrees)
+    stop()
+    distance_right = getDistance()
+    
+    # turn back to where we started
+    spinLeft(50)
+    time(time5degrees)
+    Stop()
+    
+    # calculate how much off we are
+    if distance_left > distance_right:  # scan right for minimum
         distance_old = distance_left
         distance_new = diatance_mid
         while distance_new < distance_old:
