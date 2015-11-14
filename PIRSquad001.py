@@ -7,7 +7,7 @@
 import time
 
 import pi2go
-import pi2go_sim    #simulation library for testing
+#import pi2go_sim    #simulation library for testing
 
 # Import manual control libraries
 import usb.core
