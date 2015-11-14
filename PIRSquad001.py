@@ -133,8 +133,9 @@ def square_up():
         spinLeft(50)
         time(time5degrees / 10.0)
         Stop()
-	else   # scan left for minimum
-		distance_old = distance_right
+    else:
+        # scan left for minimum
+    	distance_old = distance_right
         distance_new = diatance_mid
         while distance_new < distance_old:
             spinLeft(50)
@@ -160,25 +161,25 @@ def square_up():
 	result = getDistance()
 
 def follow_line():
-	"""Follow a black line on a white background"""
+    """Follow a black line on a white background"""
     # start speed
     speed = 60
     # start with no turn-rate
-	turn = 0.0
-	# count steps on this turn-rate; use to accelerate
-	step = 0
-	
-	while True  #action
-		# turn left if left sensor detects dark line
-		if irLeftLine():
+    turn = 0.0
+    # count steps on this turn-rate; use to accelerate
+    step = 0
+    
+    while True:  #action
+        # turn left if left sensor detects dark line
+        if irLeftLine():
             if turn >= 0:
                 step = 0
             turn -= 10
-		elif irRightLine():
+        elif irRightLine():
             if turn <= 0:
                 step = 0
             turn += 10
-		else
+        else:
             # no change for now as line is between sensors
             pass
         
@@ -204,8 +205,8 @@ No part of the robot is permitted to touch the wall,
 so tactile sensors 'feeling' the wall would constitute a failure.
 """		
 def proximity_test():
-	"""Perform whole PiWars Proximity Test challenge."""
-	
+    """Perform whole PiWars Proximity Test challenge."""
+    
     # drive forward 1.3m so that sensors are in range.
     # use wheel turn calibration on distance
     go(100)
@@ -217,12 +218,12 @@ def proximity_test():
     
     # proceed towards the wall slowing down as we approach
     # speeed 1 (max) at 20cm and 0 (min) at 0.5cm
-    do until distance = 0.5
+    while distance > 0.5:
         go((distance-0.5)/19.5*100)
         distance = getDistance()
     stop()
 	
-def gotoline(speed, over==True):
+def gotoline(speed, over=True):
     """Proceed forward until cross the line."""
     go(speed)
     while not irLeftLine():
@@ -231,13 +232,13 @@ def gotoline(speed, over==True):
         # get off the line
         while irLeftLine():
             time(0.1)
-		
+
 def three_point_turn():
     """Perform three point turn."""
     # start speed
     speed = 100
     # start with no turn-rate
-	turn = 100.0
+    turn = 100.0
 	
 	# start inside a marked, A3-sized box.
     
@@ -286,7 +287,7 @@ def three_point_turn():
 
 		
 def straight_line():
-	"""Straight line speed test."""
+    """Straight line speed test."""
     # Full speed
     speed = 100
     
@@ -302,7 +303,7 @@ def straight_line():
     go(speed)
     sleep(time10cm*2)
     
-	stop()
+    stop()
 
     
 def controlstart():
@@ -325,13 +326,13 @@ def controlstart():
 
     if dev.is_kernel_driver_active(USB_IF) is True:
         dev.detach_kernel_driver(USB_IF)
-
+    
     usb.util.claim_interface(dev, USB_IF)
     
     #explorerhat.light.red.off()
 
 def controlend():
-    usb.util.
+    #usb.util.release_interface()
     pass
     
 
@@ -362,7 +363,7 @@ def manual():
         if control != None:
             if BTN_DOWN in control:
                 reverse(max(leftSpeed, rightSpeed))
-
+            
             if BTN_UP in control:
                 forward(max(leftSpeed, rightSpeed))
                 
