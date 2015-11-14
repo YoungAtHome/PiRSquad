@@ -1,65 +1,30 @@
 #!/usr/bin/python3
 # PiRSquad.py
-# simple line follower using pi2go library
-# Author: Nick Young
+# PiWars 2015 Challenge code using pi2go library
+# Author: Nick Young, Jen Young
 
 # Import required Python libraries
 import time
+
 import pi2go
+import pi2go_sim	#simulation library for testing
 
-""" General Functions
-init(). Initialises GPIO pins, switches motors and LEDs Off, etc
-cleanup(). Sets all motors and LEDs off and sets GPIO to standard values
-version(). Returns 1 for Full Pi2Go, and 2 for Pi2Go-Lite. Invalid until after init() has been called
-"""
+# Import manual control libraries
+import usb.core
+import usb.util
 
-""" Motor Functions
-# stop(): Stops both motors
-# forward(speed): Sets both motors to move forward at speed. 0 <= speed <= 100
-# reverse(speed): Sets both motors to reverse at speed. 0 <= speed <= 100
-# spinLeft(speed): Sets motors to turn opposite directions at speed. 0 <= speed <= 100
-# spinRight(speed): Sets motors to turn opposite directions at speed. 0 <= speed <= 100
-# turnForward(leftSpeed, rightSpeed): Moves forwards in an arc by setting different speeds. 0 <= leftSpeed,rightSpeed <= 100
-# turnreverse(leftSpeed, rightSpeed): Moves backwards in an arc by setting different speeds. 0 <= leftSpeed,rightSpeed <= 100
-# go(leftSpeed, rightSpeed): controls motors in both directions independently using different positive/negative speeds. -100<= leftSpeed,rightSpeed <= 100
-# go(speed): controls motors in both directions together with positive/negative speed parameter. -100<= speed <= 100
-"""
+# Import control library for skittle 'helmet'
+import explorerhat
 
-""" IR Sensor Functions
-# irLeft(): Returns state of Left IR Obstacle sensor
-# irRight(): Returns state of Right IR Obstacle sensor
-# irAll(): Returns true if any of the Obstacle sensors are triggered
-# irLeftLine(): Returns state of Left IR Line sensor
-# irRightLine(): Returns state of Right IR Line sensor
-"""
 
-""" UltraSonic Functions
-# getDistance(). Returns the distance in cm to the nearest reflecting object. 0 == no object
-"""
-
-""" Light Sensor Functions
-# (Full Pi2Go only)
-#
-# getLight(Sensor). Returns the value 0..1023 for the selected sensor, 0 <= Sensor <= 3
-# getLightFL(). Returns the value 0..1023 for Front-Left light sensor
-# getLightFR(). Returns the value 0..1023 for Front-Right light sensor
-# getLightBL(). Returns the value 0..1023 for Back-Left light sensor
-# getLightBR(). Returns the value 0..1023 for Back-Right light sensor
-"""
-
-""" Servo Functions
-# startServos(). Initialises the servo background process
-# stop Servos(). terminates the servo background process
-# setServo(Servo, Degrees). Sets the servo to position in degrees -90 to +90
-"""
 
 # time that robot takes at full speed to do
 # a full circle spinning
 timespincircle = 2
 # a full circle turning
 timeturncircle = 3.5
-# ten centimetres
-timetencm = 1
+# ten centimetres forwards
+time10cm = 1
 
 # start at half speed
 leftspeed = 50
@@ -74,33 +39,40 @@ def start_stop(action):
 	result = not action
 	
 	
-def wait_for_button_release():
-	while getButton[0] = 0:
-		sleep(0.1)
-	while getButton[0] =1:
-		sleep(0.1)
+#def wait_for_button_release():
+#	while getButton[0] = 0:
+#		sleep(0.1)
+#	while getButton[0] =1:
+#		sleep(0.1)
 
 		
 # button.when_released = start_stop
 
-def calibrate
-	"""Calibrate the robot by spinning left until the left line sensor has changed to dark three times.
+#wait_for_button_release()
+#	action = start-stop(action)
 	
-	Returns nothing"""
+	
+
+
+def calibrate(action):
+	"""Calibrate the robot by performing the action until the left line sensor has changed to dark three times.
+	
+	Returns time taken for action"""
 	count = 0
 	timestart = 0.0
 	timeend = 0.0
 	online = false
 	
-	spinLeft(100)
+	# start the motor action, e.g. spinleft(100)
+	action
 	
 	# spin until see dark line
-	while irleftLine() = 0
+	while not irleftLine():
 		sleep(0.01)
 	online = True
 	timestart = time()
-	while count < 3
-		if irleftLine() > 0:
+	while count < 3:
+		if irleftLine():
 			if not online:
 				online = True
 				count += 1
@@ -110,89 +82,118 @@ def calibrate
 	timeend = time()	
 	stop()
 	
+	result = (timeend-timestart)/3
 	
+def calibrate_all():
+	global timespincircle
+	global timeturncircle
+	global time10cm
 	
+	timespincircle = calibrate(spinLeft(100))
+	timeturncircle = calibrate(turnForward(50,100))
+	time10cm = calibrate(forward(100))
 
 
-def squareup():
-	"""Square up to the wall.
-	"""
+def square_up():
+	"""Square up to the wall."""
 	# square up to the wall
-	time5degrees = timespincircle * 5 / 360
+	time5degrees = timespincircle * 5.0 / 360
 	
 	# sense distance of wall
 	distance_mid = getDistance()
 	
 	# turn 5 degrees left and sense distance of wall
 	spinLeft(50)
-	time(timespincircle)
+	time(time5degrees)
 	stop()
 	distance_left = getDistance()
 	
 	# turn back and 5 degrees more right and sense distance of wall
 	spinright(50)
-	time(0.1+0.1)
+	time(2*time5degrees)
 	stop()
 	distance_right = getDistance()
 	
 	# turn back to where we started
-	spinleft(50)
-	time(0.1)
+	spinLeft(50)
+	time(time5degrees)
 	Stop()
 	
 	# calculate how much off we are
-	rlen = 10	# length of robot for pivot to sensor
+	#rlen = 10	# length of robot for pivot to sensor
 	if distance_left > distance_right:
-		l[0] = distance_left
-		l[1] = distance_mid
-	else:
-		
+        # scan right for minimum
+        distance_old = distance_left
+        distance_new = diatance_mid
+        while distance_new < distance_old:
+            spinRight(50)
+            time(time5degrees / 10.0)
+            Stop()
+            distance_old = distance_new
+            distance_new = getDistance()
+        # spin back
+        spinLeft(50)
+        time(time5degrees / 10.0)
+        Stop()
+	else   # scan left for minimum
+		distance_old = distance_right
+        distance_new = diatance_mid
+        while distance_new < distance_old:
+            spinLeft(50)
+            time(time5degrees / 10.0)
+            Stop()
+            distance_old = distance_new
+            distance_new = getDistance()
+        # spin back
+        spinRight(50)
+        time(time5degrees / 10.0)
+        Stop()
 	
 	# turn to face the wall
-	if angle <> 0:
-		if angle < 0:
-			spinleft(50)	# angle
-		else:
-			spinright(50)	# angle
-		time(t)
-		stop()
+	#if angle <> 0:
+	#	if angle < 0:
+	#		spinleft(50)	# angle
+	#	else:
+	#		spinright(50)	# angle
+	#	time(t)
+	#	stop()
 	
 	# return distance to go
 	result = getDistance()
 
 def follow_line():
-	wait_for_button_release()
-	action = start-stop(action)
-	
-	# start with no turn-rate
+	"""Follow a black line on a white background"""
+    # start speed
+    speed = 60
+    # start with no turn-rate
 	turn = 0.0
-
-	# count steps on this turn-rate
+	# count steps on this turn-rate; use to accelerate
 	step = 0
-		
-	# Start
-	while action
+	
+	while True  #action
 		# turn left if left sensor detects dark line
-		if irLeftLine() <> 0:
-			turn -=
-			if turn < 0:
-		
-			curvecount += 1
-			turnForward(min(speed*(1-(curvecount*0.1)),100), min(speed*(1+(curvecount*0.1)),100))
-		elif irRightLine() <> 0:
-			curvecount += 1
-			turnForward(min(speed*(1+(curvecount*0.1)),100), min(speed*(1-(curvecount*0.1)),100))
+		if irLeftLine():
+            if turn >= 0:
+                step = 0
+            turn -= 10
+		elif irRightLine():
+            if turn <= 0:
+                step = 0
+            turn += 10
 		else
-			curvecount = 0
-			# accelerate in straight line
-			speed = min(speed+5,100)
-			forward(speed)
-					
-		if getButton[0] = 1:
-			# button is pressed to wait for release to flip action state
-			while getButton[0] =1:
-				time (0.1)
-			action = start-stop(action)
+            # no change for now as line is between sensors
+            pass
+        
+        # accelerate
+        step += 1
+        turnForward(min(speed+turn-step,100), min(speed-turn+step,100))
+        
+        # IGNORE button code for now.
+		#if getButton[0] = 1:
+		#	# button is pressed to wait for release to flip action state
+		#	while getButton[0] =1:
+		#		time (0.1)
+		#	action = start-stop(action)
 
 
 """
@@ -205,76 +206,242 @@ No part of the robot is permitted to touch the wall,
 so tactile sensors 'feeling' the wall would constitute a failure.
 """		
 def proximity_test():
-	"""Perform whole PiWars Proximity Test challenge.
-	"""
-	button.wait_for_press()
-
-	# Start
-	while action:
-		# drive forward 1.3m so that sensors are in range.
-		# use wheel turn calibration on distance
-		forward()
-		
-		# square off to the wall
-		distance = squareup(robot)
-		
-		# proceed towards the wall slowing down as we approach
-		# speeed 1 (max) at 20cm and 0 (min) at 0.5cm
-		do until distance = 0.5
-			robot.forward(distance/19.5)]
-			distance = sense_wall()
-		
+	"""Perform whole PiWars Proximity Test challenge."""
+	
+    # drive forward 1.3m so that sensors are in range.
+    # use wheel turn calibration on distance
+    go(100)
+    time(time10cm*13)
+    stop()
+    
+    # square off to the wall
+    distance = square_up(robot)
+    
+    # proceed towards the wall slowing down as we approach
+    # speeed 1 (max) at 20cm and 0 (min) at 0.5cm
+    do until distance = 0.5
+        go((distance-0.5)/19.5*100)
+        distance = getDistance()
+    stop()
+	
+def gotoline(speed, over==True):
+    """Proceed forward until cross the line."""
+    go(speed)
+    while not irLeftLine():
+        time(0.1)
+    if over:
+        # get off the line
+        while irLeftLine():
+            time(0.1)
 		
 def three_point_turn():
+    """Perform three point turn."""
+    # start speed
+    speed = 100
+    # start with no turn-rate
+	turn = 100.0
+	
 	# start inside a marked, A3-sized box.
     
-	button.wait_for_press()
+    # proceed forward and cross the red line.
+    gotoline(speed, True)
+    timestartout = time()
+            
+    # proceed forward and cross the next.
+    gotoline(speed, True)
+            
+    # proceed forward and cross the next.
+    gotoline(speed, True)
+    timestopout = time()
+                
+    # turn left by 90 degrees (either on the spot or in-motion).
+    spinleft(turn)
+    sleep(timespincircle*90.0/360)
+        
+    # drive forward and touch or cross the first black line.
+    # forward to left line
+    timestart = time()
+    gotoline(speed, False)
+    # leave on line
+    timestop = time()
 
-	# Start
+    # drive backwards in a straight line and touch or cross the first black line.
+    # reverse off line and then to right line
+    gotoline(-speed, True)
+    gotoline(-speed, True)
+    
+    # drive forwards to the middle of the turning area.
+    # move half across distance we have just reversed
+    go(speed)
+    sleep(timestop-timestart)
 
-	while action
-		# proceed forward and cross the red line.
-		line_sense[0].when_light = robot.stop
-		# start measuring outbound distance as count of wheel turns
-		forward
-		
-		# turn left by 90 degrees (either on the spot or in-motion).
-		spinleft(50)
-		
-		
-		# drive forward and touch or cross the first black line.
-		line_sense[0].when_dark = robot.stop
-		robot.forward
-		
-		# drive backwards in a straight line and touch or cross the first black line.
-		line_sense[0].when_dark = robot.stop
-		# start measuring across distance as count of wheel turns
-		robot.backward()
-		
-		# drive forwards to the middle of the turning area.
-		# move half across distance we have just reversed
-		robot.forward()
-		
-		# turn left by 90 degrees.
-		robot.left()
-		
-		# return to the starting box.
-		# move outbound distance back to start
-		forward()
+    # turn left by 90 degrees (either on the spot or in-motion).
+    spinleft(turn)
+    sleep(timespincircle*90.0/360)
+        
+    # return to the starting box.
+    # move outbound distance back to start
+    go(speed)
+    sleep(timestopout-timestartout)
+    
+    stop()
+
 		
 def straight_line():
+	"""Straight line speed test."""
+    # Full speed
+    speed = 100
+    
 	# start inside a marked, A3-sized box.
     
-	button.wait_for_press()
-
-	# Start
+    # cross the start line
+    gotoline(speed, True)
 	
-	while action
-		
+    # continue to finish line
+    gotoline(speed,True)
+    
+    # go 20cm further (cross the line)
+    go(speed)
+    sleep(time10cm*2)
+    
+	stop()
 
-		
-# Main loop
-challenge = [follow_line(), proximity_test(), three_point_turn()]
+    
+def controlstart():
+    """Manual keyboard control code
+    
+    Based on example at http://learn.pimoroni.com/tutorial/robots/controlling-your-robot-wireless-keyboard
+    
+    Use Rii mini-keyboard."""
+    
+    # explorerhat.light.red.on()
 
-# take action depending upon signal
-challenge[signal]
+    USB_VENDOR  = 0x1997 # Rii
+    USB_PRODUCT = 0x2433 # Mini Wireless Keyboard
+
+    USB_IF      = 0 # Interface
+    USB_TIMEOUT = 5 # Timeout in MS
+
+    dev = usb.core.find(idVendor=USB_VENDOR, idProduct=USB_PRODUCT)
+    endpoint = dev[0][(0,0)][0]
+
+    if dev.is_kernel_driver_active(USB_IF) is True:
+        dev.detach_kernel_driver(USB_IF)
+
+    usb.util.claim_interface(dev, USB_IF)
+    
+    #explorerhat.light.red.off()
+
+def controlend():
+    usb.util.
+    pass
+    
+
+def manual():
+    """Manual control.
+    
+    Use for straight_line if autonomous mode not working.
+    Use for obstacle course if autonomous mode not working.
+    Use for joust and skittles."""
+
+    BTN_LEFT  = 80
+    BTN_RIGHT = 79
+    BTN_DOWN  = 81
+    BTN_UP    = 82
+    BTN_STOP  = 44 # Space
+    BTN_EXIT  = 41 # ESC
+
+    #explorerhat.light.green.on()
+
+    while True:
+        control = None
+        try:
+            control = dev.read(endpoint.bEndpointAddress, endpoint.wMaxPacketSize, USB_TIMEOUT)
+            #print(control)
+        except:
+            pass
+
+        if control != None:
+            if BTN_DOWN in control:
+                reverse(max(leftSpeed, rightSpeed))
+
+            if BTN_UP in control:
+                forward(max(leftSpeed, rightSpeed))
+                
+            if BTN_LEFT in control:
+                spinLeft(max(leftSpeed, rightSpeed))
+
+            if BTN_RIGHT in control:
+                spinRight(max(leftSpeed, rightSpeed))
+                
+            if BTN_STOP in control:
+                stop()
+
+            if BTN_EXIT in control:
+                break
+
+        time.sleep(0.02)
+
+    #explorerhat.light.green.off()
+
+def selection():
+    """Perform a PiWars challenge, autonomous or manual based on keypress
+    
+    Current options are:
+        follow_line
+        proximity_test
+        three_point_turn
+        manual"""
+      
+    BTN_C  = 6
+    BTN_F  = 9
+    BTN_P = 19
+    BTN_T = 23
+    BTN_M = 16
+    BTN_Q = 20
+    
+    while True:
+        control = None
+        try:
+            control = dev.read(endpoint.bEndpointAddress, endpoint.wMaxPacketSize, USB_TIMEOUT)
+            #print(control)
+        except:
+            pass
+
+        if control != None:
+            if BTN_C in control:
+                calibrate_all()
+                
+            if BTN_F in control:
+                follow_line()
+
+            if BTN_P in control:
+                proximity_test()
+                
+            if BTN_T in control:
+                three_point_turn()
+
+            if BTN_M in control:
+                manual()
+                
+            if BTN_Q in control:
+                break
+
+        time.sleep(0.02)
+
+    #explorerhat.light.green.off()
+    
+try:
+    # Start the robot
+    # Initialises GPIO pins, switches motors and LEDs Off, etc
+    init()
+    
+    # Select the action based on keypress
+    selection()
+    
+finally:
+    # Stop motors
+    stop()
+    
+    # Sets all motors and LEDs off and sets GPIO to standard values
+    cleanup()
