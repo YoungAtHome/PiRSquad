@@ -7,6 +7,7 @@ from math import sqrt, cos, sin
 if __name__ == "__main__":
     #just for testing
     import random
+import logging
 
 # describe the line following course
 # use a series of limited equations
@@ -81,10 +82,10 @@ sim_3point_segments = (sim_buildhline(0, 35), sim_buildhline(20, 35), sim_buildh
 sim_3point_size = (120, 240)
     
 # assign current course
-#sim_course = sim_line_segments
-#sim_course_size = sim_line_size
-sim_course = sim_3point_segments
-sim_course_size = sim_3point_size
+sim_course = sim_line_segments
+sim_course_size = sim_line_size
+#sim_course = sim_3point_segments
+#sim_course_size = sim_3point_size
 #sim_course = sim_straight_segments
 #sim_course_size = sim_stright_size
 
@@ -93,6 +94,7 @@ def sim_online(x, y):
     """Check if position is on the line
     
     Return boolean, True if on line, False otherwise"""
+    logging.debug('SIM:online() x={} y={}'.format(x, y))
     return sim_check(x, y, SIM_LINE)==SIM_LINE
         
 def sim_atblock(x, y):
@@ -112,9 +114,10 @@ def sim_check(x, y, t):
             break
     return sim_chk
 
-    
+
 def sim_getdistance(x, y, dr):
     """Get distance to next block in cm or 0"""
+    logging.debug('SIM:sim_getdistance() called.')
     xo = cos(dr)
     yo = sin(dr)
     d = 0
@@ -127,7 +130,11 @@ def sim_getdistance(x, y, dr):
         blk = sim_atblock(x, y)
         if blk:
             break
-    return blk and d
+    if blk:
+        return d
+    else:
+        return 0
+    #return blk and d
 
 
 if __name__ == "__main__":

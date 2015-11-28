@@ -5,7 +5,8 @@
 from math import cos, sin, radians
 import threading
 import sim_course
-
+import logging
+import time
 
 # Simulated robot characteristic
 # Two wheel robot
@@ -25,8 +26,8 @@ SIM_PULSE = 0.1
 
 # Position of robot
 # mid-point between wheels
-sim_x = 0
-sim_y = 0
+sim_x = 10
+sim_y = 30
 # Direction of robot in radians
 sim_direction = radians(90)
 # Current speed of motors, 0 <= speed <= 100
@@ -40,33 +41,47 @@ sim_thread = None
 # General Functions
 def init():
     """Initialises GPIO pins, switches motors and LEDs Off, etc."""
+
+    #log constants
+    #logging.basicConfig(filename = 'sim.log', level=logging.DEBUG)
+
+    logging.info('SIM:Speed={}'.format(SIM_SPEED))
+    logging.info('SIM:Pulse={}'.format(SIM_PULSE))
+
     global sim_x, sim_y, sim_direction, sim_lspeed, sim_rspeed, sim_initiated, sim_thread
     sim_x = 0
     sim_y = 0
+    logging.info('SIM:x={} y={}'.format(sim_x, sim_y))
     
     sim_direction = radians(90)
+    logging.info('SIM:Directiom={}'.format(sim_direction))
 
     sim_lspeed = 0
     sim_rspeed = 0
+    logging.info('SIM:lspeed={} rspeed={}'.format(sim_lspeed, sim_rspeed))
 
     sim_initiated = True
 
-    sim_thread = threading.timer(SIM_PULSE, sim_move)
+    sim_thread = threading.Timer(SIM_PULSE, sim_move)
     sim_thread.start()    # ten times a second check for movement.
 
 def sim_move():
     """Move robot distance and direction for one pulse."""
     global sim_x, sim_y, sim_direction
+    logging.debug('SIM:time={}'.format(time.time()))
     if sim_lspeed != 0 or sim_rspeed != 0:    # moving
+        logging.info('SIM:move() lspeed={} rspeed={}'.format(sim_lspeed, sim_rspeed))
         if sim_lspeed == sim_rspeed:    # straight line
             sim_x += (sim_lspeed / 100.0 * SIM_SPEED / SIM_PULSE * cos(sim_direction))
             sim_y += (sim_lspeed / 100.0 * SIM_SPEED / SIM_PULSE * sin(sim_direction))
+            logging.info('SIM:x={} y={}'.format(sim_x, sim_y))
         else:
             # right wheel arc distance is percentage of full speed in time of pulse
             rd = SIM_SPEED * (sim_rspeed / 100.0) * SIM_PULSE
             if sim_lspeed == -sim_rspeed:    # spinning
                 # angle in radians is arc length over radius
                 sim_direction += rd / (SIM_AXLE / 2.0) 
+                logging.info('SIM:Directiom={}'.format(sim_direction))
             else: # turning
                 # left wheel arc distance
                 #         wheel speed: circumference of spin divided by time for circle
@@ -78,20 +93,24 @@ def sim_move():
                 # inner radius
                 r = (SIM_AXLE * rd) / (ld + rd)
                 sim_direction += (r * ld)
-                
+                logging.info('SIM:Directiom={}'.format(sim_direction))
+
                 # chord length is 2R sin (theta / 2)
                 d = 2 * (r + SIM_AXLE / 2) * sin(cur_direction / 2)
                 
                 sim_x += d * cos(sim_direction)
                 sim_y += d * sin(sim_direction)
-    
+                logging.info('SIM:x={} y={}'.format(sim_x, sim_y))
+
+
 def cleanup():
     """Sets all motors and LEDs off and sets GPIO to standard values."""
     global sim_lspeed, sim_rspeed
     sim_lspeed = 0
     sim_rspeed = 0
     
-    sim_thread.stop()
+    if not sim_thread is None:
+        sim_thread.cancel()
 
 def version():
     """Returns 1 for Full Pi2Go, and 2 for Pi2Go-Lite. Invalid until after init() has been called."""
@@ -112,6 +131,7 @@ def forward(speed):
     if 0 <= speed <= 100:
         sim_lspeed = speed
         sim_rspeed = speed
+        logging.info('SIM:forward() lspeed={} rspeed={}'.format(sim_lspeed, sim_rspeed))
 
 def reverse(speed):
     """Sets both motors to reverse at speed."""
@@ -141,6 +161,7 @@ def turnForward(leftSpeed, rightSpeed):
     if (0 <= leftSpeed <= 100) and (0 <= rightSpeed <= 100):
         sim_lspeed = leftSpeed
         sim_rspeed = rightSpeed
+        logging.info('SIM:turnforward() lspeed={} rspeed={}'.format(sim_lspeed, sim_rspeed))
 
 def turnReverse(leftSpeed, rightSpeed):
     """Moves backwards in an arc by setting different speeds."""
@@ -161,6 +182,8 @@ def go(speed1, speed2 = None):
         if speed2 != None:
             if -100 <= speed2 <= 100:
                 sim_rspeed = speed2
+        logging.info('SIM:go() lspeed={} rspeed={}'.format(sim_lspeed, sim_rspeed))
+     
 
 
 
@@ -170,51 +193,69 @@ def irLeft():
     """Returns state of Left IR Obstacle sensor."""
     irlx = sim_x - SIM_AXLE / 2 * sin(sim_direction) + SIM_FRONT * cos(sim_direction)
     irly = sim_y + SIM_AXLE / 2 * cos(sim_direction) + SIM_FRONT * sin(sim_direction)
-    return sim_atblock(irlx, irly)
+    return sim_course.sim_atblock(irlx, irly)
 
 def irRight():
     """Returns state of Right IR Obstacle sensor."""
     irrx = sim_x + SIM_AXLE / 2 * sin(sim_direction) + SIM_FRONT * cos(sim_direction)
     irry = sim_y - SIM_AXLE / 2 * cos(sim_direction) + SIM_FRONT * sin(sim_direction)
-    return sim_atblock(irrx, irry)
+    return sim_course.sim_atblock(irrx, irry)
 
 def irAll():
     """Returns true if any of the Obstacle sensors are triggered."""
     return irLeft or irRight
 
-def irleftLine():
-    """Returns state of Left IR Line sensor."""
+def irLeftLine():
+    """Returns state of Left IR Line sensor.
+
+    False if Black"""
     #sim_x, sim_y are centre of robot between axles.
     irlx = sim_x - SIM_GAP / 2 * sin(sim_direction) + SIM_FRONT * cos(sim_direction)
     irly = sim_y + SIM_GAP / 2 * cos(sim_direction) + SIM_FRONT * sin(sim_direction)
-    return sim_online(irlx, irly)
+    return not sim_course.sim_online(irlx, irly)
 
 def irRightLine():
-    """Returns state of Right IR Line sensor."""
+    """Returns state of Right IR Line sensor.
+
+    False if Black"""
     #sim_x, sim_y are centre of robot between axles.
     irrx = sim_x + SIM_GAP / 2 * sin(sim_direction) + SIM_FRONT * cos(sim_direction)
     irry = sim_y - SIM_GAP / 2 * cos(sim_direction) + SIM_FRONT * sin(sim_direction)
-    return sim_online(irrx, irry)
+    return not sim_course.sim_online(irrx, irry)
 
 # UltraSonic Functions
 def getDistance():
     """Returns the distance in cm to the nearest block object.
-    
     Distance is from sensors on front of robot.
     return distance or 0 if no object."""
+    logging.debug('SIM:getDistance() called.')
     sensx = sim_x + SIM_FRONT * cos(sim_direction)
     sensy = sim_y + SIM_FRONT * sin(sim_direction)
-    return sim_getDistance(sensx, sensy, sim_direction)
+    return sim_course.sim_getdistance(sensx, sensy, sim_direction)
 
 
 """ Light Sensor Functions
-(Full Pi2Go only)
+(Full Pi2Go only)"""
+def getLight(Sensor):
+    """Returns the value 0..1023 for the selected sensor, 0 <= Sensor <= 3"""
+    raise NotImplementedError
 
-getLight(Sensor). Returns the value 0..1023 for the selected sensor, 0 <= Sensor <= 3
-getLightFL(). Returns the value 0..1023 for Front-Left light sensor
-getLightFR(). Returns the value 0..1023 for Front-Right light sensor
-getLightBL(). Returns the value 0..1023 for Back-Left light sensor
-getLightBR(). Returns the value 0..1023 for Back-Right light sensor"""
+def getLightFL():
+    """Returns the value 0..1023 for Front-Left light sensor"""
+    raise NotImplementedError
+
+def getLightFR():
+    """Returns the value 0..1023 for Front-Right light sensor"""
+    raise NotImplementedError
+
+def getLightBL():
+    """Returns the value 0..1023 for Back-Left light sensor"""
+    raise NotImplementedError
+
+def getLightBR(): 
+    """Returns the value 0..1023 for Back-Right light sensor"""
+    raise NotImplementedError
+
 
 # Servo Functions
 def startServos():
@@ -228,3 +269,7 @@ def stopServos():
 def setServo(Servo, Degrees):
     """Sets the servo to position in degrees -90 to +90."""
     raise NotImplementedError
+
+def getSwitch():
+    #getch
+    return False
