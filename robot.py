@@ -14,8 +14,8 @@ sys.path.append('/home/pi/library/pyusb')
 import time
 import logging
 
-#import pi2go
-import sim_pi2go as pi2go    #simulation library for testing
+import pi2go
+#import sim_pi2go as pi2go    #simulation library for testing
 
 # Import manual control libraries
 import usb.core
@@ -24,7 +24,9 @@ import usb.util
 # Import control library for skittle 'helmet'
 #import explorerhat
 
-USB_IF      = 0 # Interface
+USB_IF_KYBD = 0 # Keyboard Interface
+USB_IF_TCHPD = 1 # Touchpad/mouse interface
+
 USB_TIMEOUT = 5 # Timeout in MS
 
 USB_VENDOR  = 0x1997 # Rii
@@ -50,7 +52,8 @@ rightspeed = 50
 #step
 
 dev = None
-endpoint = None
+endpointk = None
+endpointt = None
 
 # Action and start-stop button
 action = False
@@ -229,9 +232,9 @@ def square_up():
 def follow_line():
     """Follow a black line on a white background"""
     #SIM_PULSE = 0.035
-    TURN_RATE = 30
-    STEP_RATE = 0 #0.5
-    SPEED_LINE = 60    
+    TURN_RATE = 50
+    STEP_RATE = 1 #0.5
+    SPEED_LINE = 35  
     logging.debug('Turn-rate={} Step-rate={}'.format(TURN_RATE, STEP_RATE))
     # start speed
     speed = SPEED_LINE
@@ -246,24 +249,24 @@ def follow_line():
         #logging.debug('time0={}'.format(time.time()))
         # turn left if left sensor detects dark line
         if not pi2go.irLeftLine():
-            logging.debug('Left')
+            #logging.debug('Left')
             if turn > 0:
                 step = 0
             #turn = -TURN_RATE
             #turn = max(turn - TURN_RATE, -100)
-            speed = TURN_RATE
+            speed = TURN_RATE-20
             turn = -TURN_RATE
         elif not pi2go.irRightLine():
-            logging.debug('     Right')
+            #logging.debug('     Right')
             if turn < 0:
                 step = 0
             #turn = TURN_RATE
             #turn = min(turn + TURN_RATE, 100)
-            speed = TURN_RATE
+            speed = TURN_RATE-20
             turn = TURN_RATE
         else:
             # no change for now as line is between sensors
-            logging.debug('  None  ')
+            #logging.debug('  None  ')
             speed = SPEED_LINE
             turn = 0
             #pass
@@ -275,7 +278,7 @@ def follow_line():
         
         leftspeed = max(min(speed + turn + step * STEP_RATE * my_sign(turn), 100), -100)
         rightspeed = max(min(speed - turn + step * STEP_RATE * my_sign(-turn), 100), -100)
-        logging.debug("turn={} step={} lspeed={} rspeed={}".format(turn, step, leftspeed, rightspeed))
+        #logging.debug("turn={} step={} lspeed={} rspeed={}".format(turn, step, leftspeed, rightspeed))
         #logging.debug("lspeed={} rspeed={}".format(leftspeed, rightspeed))
         #pi2go.stop()
         #time.sleep(0.5)
@@ -415,27 +418,62 @@ def controlstart():
     Based on example at http://learn.pimoroni.com/tutorial/robots/controlling-your-robot-wireless-keyboard
     
     Use Rii mini-keyboard."""
-    global dev, endpoint
+    global dev, endpointk, endpointt
     # light.red.on()
+    
+    #Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+    #dev = usb.core.find(find_all=True, idVendor=0x1d6b, idProduct=0x0002)
 
     dev = usb.core.find(idVendor=USB_VENDOR, idProduct=USB_PRODUCT)
-
-    logging.info('dev 0:'.format(dev[0]))    
-    if len(dev).1: logging.info('dev 0:'.format(dev[1]))    
-    endpoint = dev[0][(0, 0)][0]
-
-    if dev.is_kernel_driver_active(USB_IF) is True:
-        dev.detach_kernel_driver(USB_IF)
+    if dev is None:
+        raise ValueError('Device not found')
+    #if dev.bDeviceClass != 3:
+    #    raise ValueError('Device is not for Human Consumption')
     
-    usb.util.claim_interface(dev, USB_IF)
+    #find Human Interface Devices, class 3, e.g. keyboard and mouse
+    for cfg in dev:
+        #intf = usb.util.find_descriptor(cfg)#, bInterfaceClass=3)
+        for intf in cfg:
+            logging.debug('intf={}'.format(intf))
+            if dev.is_kernel_driver_active(intf.bInterfaceNumber) is True:
+                logging.debug('Free from Kernel')
+                dev.detach_kernel_driver(intf.bInterfaceNumber)
+            logging.debug('Claiming interface {}'.format(intf.bInterfaceNumber))
+            usb.util.claim_interface(dev, intf.bInterfaceNumber)
+            for ep in intf:
+                if endpointk is None:
+                    endpointk = ep
+                else:
+                    endpointt = ep
+        #    ep = usb.util.find_descriptor(intf)
+        #    logging.debug('ep={}'.format(ep))
+            
+
+    #logging.info('Device has {} interfaces'.format(len(dev)))
+    #logging.info('dev 0:'.format(dev[0]))    
+    #if len(dev) > 1: logging.info('dev 0:'.format(dev[1]))    
+    #endpointk = dev[0][0][(0,0)][0]
+    #endpointt = dev[0][1][(1,0)][0]
+
+    #if dev.is_kernel_driver_active(USB_IF_KYBD) is True:
+    #    dev.detach_kernel_driver(USB_IF_KYBD)
+    
+    #logging.debug('claiming keyboard')
+    #usb.util.claim_interface(dev, USB_IF_KYBD)
+    #logging.debug('claiming touchpad')
+    #usb.util.claim_interface(dev, USB_IF_TCHPD)
     
     #explorerhat.light.red.off()
 
 def controlend():
     if not dev is None:
-        usb.util.release_interface(dev, USB_IF)
-        usb.util.dispose_resources(dev)    
-    
+        for cfg in dev:
+            for intf in cfg:
+                usb.util.release_interface(dev, intf.bInterfaceNumber)
+                dev.attach_kernel_driver(intf.bInterfaceNumber)
+                
+                #usb.util.dispose_resources(intf.bInterfaceNumber)
+
 
 def manual():
     """Manual control.
@@ -458,8 +496,10 @@ def manual():
     
     while not pi2go.getSwitch():
         control = None
+        ctrl_touch = None
         try:
-            control = dev.read(endpoint.bEndpointAddress, endpoint.wMaxPacketSize, USB_TIMEOUT)
+            control = dev.read(endpointk.bEndpointAddress, endpointk.wMaxPacketSize, USB_TIMEOUT)
+            ctrl_touch = dev.read(endpointt.bEndpointAddress, endpointt.wMaxPacketSize, USB_TIMEOUT)
             #print(control)
         except:
             pass
@@ -494,6 +534,9 @@ def manual():
             if BTN_EXIT in control:
                 break
         
+        if ctrl_touch != None:
+            logging.debug('ctrl touch={}'.format(ctrl_touch))
+            
         time.sleep(0.02)
 
     #light.green.off()
@@ -507,7 +550,7 @@ def selection():
         proximity_test
         three_point_turn
         manual"""
-    global dev, endpoint
+    global dev, endpointk
       
     BTN_C  = 6
     BTN_F  = 9
@@ -522,7 +565,7 @@ def selection():
     while True:
         control = None
         try:
-            control = dev.read(endpoint.bEndpointAddress, endpoint.wMaxPacketSize, USB_TIMEOUT)
+            control = dev.read(endpointk.bEndpointAddress, endpointk.wMaxPacketSize, USB_TIMEOUT)
             logging.debug('Control={}'.format(control))
         except:
             pass
@@ -591,3 +634,5 @@ finally:
     
     # Sets all motors and LEDs off and sets GPIO to standard values
     pi2go.cleanup()
+
+#Bus 001 Device 002: ID 1997:0409  
