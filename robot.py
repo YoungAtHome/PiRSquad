@@ -434,7 +434,7 @@ def controlstart():
     for cfg in dev:
         #intf = usb.util.find_descriptor(cfg)#, bInterfaceClass=3)
         for intf in cfg:
-            logging.debug('intf={}'.format(intf))
+            #logging.debug('intf={}'.format(intf))
             if dev.is_kernel_driver_active(intf.bInterfaceNumber) is True:
                 logging.debug('Free from Kernel')
                 dev.detach_kernel_driver(intf.bInterfaceNumber)
